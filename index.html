@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>日本語謎解きチーム戦</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif; background: #14202e; color: #f2f2f2; min-height: 100vh; }
+  .wrap { max-width: 900px; margin: 0 auto; padding: 20px 16px 40px; }
+  h1 { font-size: 28px; text-align: center; margin: 18px 0 6px; }
+  .sub { text-align: center; color: #b9c6d2; font-size: 14px; margin-bottom: 22px; }
+  .card { background: #1e3042; border-radius: 14px; padding: 20px; margin-bottom: 16px; }
+  .bigbtn { display: block; width: 100%; padding: 18px; margin: 10px 0; font-size: 20px; font-weight: bold; border: none; border-radius: 12px; cursor: pointer; background: #ffb703; color: #14202e; }
+  .bigbtn.blue { background: #4cc9f0; }
+  .bigbtn.green { background: #80ed99; }
+  .bigbtn:disabled { opacity: .45; cursor: default; }
+  input[type=text] { width: 100%; padding: 14px; font-size: 20px; border-radius: 10px; border: 2px solid #4a6a86; background: #0f1a26; color: #fff; margin: 8px 0; }
+  .code { font-size: 64px; font-weight: bold; letter-spacing: 12px; text-align: center; color: #ffb703; margin: 8px 0; }
+  .label { font-size: 13px; color: #9fb4c6; margin-top: 10px; }
+  .teamchip { display: inline-block; padding: 8px 14px; border-radius: 999px; margin: 4px; font-weight: bold; color: #14202e; }
+  .q-text { font-size: 21px; line-height: 1.7; white-space: pre-wrap; }
+  .q-title { font-size: 15px; color: #ffb703; font-weight: bold; margin-bottom: 8px; }
+  .hint { background: #0f1a26; border-left: 4px solid #ffb703; padding: 10px 12px; margin: 8px 0; font-size: 15px; display: none; }
+  .hint.open { display: block; }
+  .smallbtn { padding: 10px 16px; font-size: 15px; border-radius: 8px; border: 1px solid #4a6a86; background: transparent; color: #cfe3f2; cursor: pointer; margin: 4px 4px 4px 0; }
+  .msg { min-height: 24px; font-size: 16px; margin: 8px 0; }
+  .ok { color: #80ed99; font-weight: bold; }
+  .ng { color: #ff8fa3; }
+  .clues { margin: 10px 0; }
+  .clue { display: inline-block; background: #ffb703; color: #14202e; font-weight: bold; padding: 6px 14px; border-radius: 8px; margin: 3px; font-size: 17px; }
+  .hidden { display: none !important; }
+  /* TV dashboard */
+  .tv-wrap { max-width: 1400px; margin: 0 auto; padding: 24px; }
+  .tv-head { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; }
+  .tv-title { font-size: 40px; font-weight: bold; }
+  .tv-code { font-size: 30px; color: #ffb703; font-weight: bold; }
+  .tv-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 18px; margin-top: 20px; }
+  .tv-team { border-radius: 16px; padding: 20px; color: #14202e; }
+  .tv-team .name { font-size: 32px; font-weight: bold; }
+  .tv-team .score { font-size: 54px; font-weight: bold; }
+  .tv-team .score small { font-size: 22px; }
+  .dots { font-size: 30px; letter-spacing: 6px; margin: 6px 0; }
+  .tv-team .st { font-size: 20px; font-weight: bold; }
+  .rank1 { outline: 5px solid #ffd60a; }
+  .tv-feed { margin-top: 22px; background: #1e3042; border-radius: 14px; padding: 16px 20px; }
+  .tv-feed div { font-size: 22px; padding: 4px 0; border-bottom: 1px solid #33506c; }
+  .tv-feed div:last-child { border-bottom: none; }
+  .tv-wait { font-size: 26px; text-align: center; color: #b9c6d2; margin-top: 30px; }
+</style>
+</head>
+<body>
+
+<!-- ===== スタート画面 ===== -->
+<div class="wrap" id="view-start">
+  <h1>🔐 日本語謎解きチーム戦</h1>
+  <div class="sub">チームで考えて、謎を解こう。テレビには全チームの状況が映ります。</div>
+  <button class="bigbtn" id="btn-to-host">先生：ルームを作る</button>
+  <button class="bigbtn blue" id="btn-to-team">チーム：参加する</button>
+  <button class="bigbtn green" id="btn-to-tv">テレビ表示：状況を見る</button>
+</div>
+
+<!-- ===== 先生（ホスト）画面 ===== -->
+<div class="wrap hidden" id="view-host">
+  <h1>先生画面</h1>
+  <div class="card">
+    <div class="label">ルームコード（チームとテレビに、この番号を入力してもらってください）</div>
+    <div class="code" id="host-code">----</div>
+    <div class="label">参加中のチーム</div>
+    <div id="host-teams"><span style="color:#9fb4c6">まだいません</span></div>
+  </div>
+  <div class="card">
+    <div class="label">ミッション</div>
+    <div style="font-size:19px;font-weight:bold">ミッション1：消えた教室の鍵（N3）</div>
+    <button class="bigbtn" id="btn-start" disabled>ゲームスタート</button>
+    <button class="smallbtn" id="btn-finish">ゲームを終わる（結果発表）</button>
+    <button class="smallbtn" id="btn-reset-room">ルームを作り直す</button>
+    <div class="msg" id="host-msg"></div>
+  </div>
+</div>
+
+<!-- ===== チーム参加画面 ===== -->
+<div class="wrap hidden" id="view-join">
+  <h1>チーム参加</h1>
+  <div class="card">
+    <div class="label">ルームコード（4けたの数字）</div>
+    <input type="text" id="join-code" inputmode="numeric" maxlength="4" placeholder="例：1234">
+    <div class="label">チーム名</div>
+    <input type="text" id="join-name" maxlength="10" placeholder="例：さくらチーム">
+    <button class="bigbtn blue" id="btn-join">参加する</button>
+    <div class="msg" id="join-msg"></div>
+  </div>
+</div>
+
+<!-- ===== チーム：待機・問題画面 ===== -->
+<div class="wrap hidden" id="view-team">
+  <h1 id="team-name-title">チーム</h1>
+  <div class="sub" id="team-score-line">スコア：0点</div>
+  <div class="card" id="team-wait">
+    <div style="font-size:20px;text-align:center">先生がスタートするのを待っています…</div>
+  </div>
+  <div class="card hidden" id="team-q">
+    <div class="q-title" id="q-step-label">ステップ 1 / 4</div>
+    <div class="clues" id="q-clues"></div>
+    <div class="q-text" id="q-text"></div>
+    <div id="q-hints"></div>
+    <button class="smallbtn" id="btn-hint">ヒントを見る（−2点）</button>
+    <input type="text" id="q-answer" placeholder="答えを入力">
+    <button class="bigbtn" id="btn-answer">こたえる</button>
+    <div class="msg" id="q-msg"></div>
+  </div>
+  <div class="card hidden" id="team-done">
+    <div style="font-size:24px;text-align:center">🎉 ゴール！ テレビの結果発表を見てね</div>
+  </div>
+</div>
+
+<!-- ===== テレビ画面 ===== -->
+<div class="tv-wrap hidden" id="view-tv">
+  <div class="tv-head">
+    <div class="tv-title">🔐 謎解きチーム戦</div>
+    <div class="tv-code" id="tv-code-label"></div>
+  </div>
+  <div class="card" id="tv-join-box">
+    <div class="label">見るルームのコード（4けた）</div>
+    <input type="text" id="tv-code" inputmode="numeric" maxlength="4" placeholder="例：1234" style="max-width:300px">
+    <button class="bigbtn green" id="btn-tv-open" style="max-width:300px">表示する</button>
+    <div class="msg" id="tv-msg"></div>
+  </div>
+  <div class="tv-grid" id="tv-grid"></div>
+  <div class="tv-wait" id="tv-status"></div>
+  <div class="tv-feed" id="tv-feed"></div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+import { getDatabase, ref, set, update, get, push, onValue } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js";
+
+/* __FIREBASE_CONFIG_START__ */
+const firebaseConfig = {
+  apiKey: "AIzaSyDfC1NaEG86JxgmwOcO3KW0aPV4QwZF2X8",
+  authDomain: "nazotoki-battle.firebaseapp.com",
+  databaseURL: "https://nazotoki-battle-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "nazotoki-battle",
+  storageBucket: "nazotoki-battle.firebasestorage.app",
+  messagingSenderId: "533019066476",
+  appId: "1:533019066476:web:fc953327d04c718d5a5849"
+};
+/* __FIREBASE_CONFIG_END__ */
+
+const MISSIONS = [{
+  id: "key",
+  title: "ミッション1：消えた教室の鍵（N3）",
+  steps: [
+    {
+      text: "鍵のありかを示すメモが残されていた。\n\n数字は「五十音表」の場所を表す。\n行：あ=1、か=2、さ=3、た=4、な=5、は=6、ま=7、や=8、ら=9\n列：あ=1、い=2、う=3、え=4、お=5\n\n「4-3　2-3　1-4」\n\nこれは何という言葉？",
+      accept: ["つくえ", "机"],
+      hints: ["数字は五十音表の「行」と「列」の場所だよ", "4-3は「た」の行の「う」の列", "教室にある家具。勉強するときに使うもの"]
+    },
+    {
+      text: "次のメモには、文字がバラバラに書かれていた。\n\n「せ・い・が・く」\n\n並び替えて、言葉を作ろう。",
+      accept: ["がくせい", "学生"],
+      hints: ["学校に通う人のこと", "「が」から始まる言葉", "答えは「学生（がくせい）」の読み方"]
+    },
+    {
+      text: "3つ目のメモは、漢字のパズルだった。\n\n○央\n○心\n○国\n\n○に共通して入る漢字1文字は？",
+      accept: ["中", "なか", "ちゅう"],
+      hints: ["「真ん中」という意味の漢字", "「ちゅう」と読む漢字", "中央・中心・中国に共通して入る文字"]
+    },
+    {
+      text: "最後の謎だ。集めた3つの手がかりを「の」でつないで、鍵の場所を完成させよう。\n\n手がかり：つくえ／がくせい／中\n\n「○○の○○の○○」\n鍵はどこにある？（文章で答えてね）",
+      accept: ["がくせいのつくえのなか", "学生の机の中", "がくせいのつくえ", "学生の机", "つくえのなか", "机の中"],
+      hints: ["3つの言葉を「の」でつなぐ", "順番は「がくせい→つくえ→中」", "答えは「学生の机の中」"]
+    }
+  ]
+}];
+
+const TEAM_COLORS = ["#ff8fa3", "#4cc9f0", "#80ed99", "#ffb703", "#c77dff", "#ffa94d"];
+
+let db = null;
+try {
+  if (firebaseConfig.apiKey.startsWith("__")) throw new Error("no-config");
+  db = getDatabase(initializeApp(firebaseConfig));
+} catch (e) {
+  document.querySelector("#view-start .sub").textContent = "接続設定がまだ入っていません。先生に連絡してください。";
+}
+
+const $ = s => document.querySelector(s);
+function show(id) {
+  ["#view-start", "#view-host", "#view-join", "#view-team", "#view-tv"].forEach(v => $(v).classList.add("hidden"));
+  $(id).classList.remove("hidden");
+}
+function normalize(s) {
+  if (!s) return "";
+  s = s.normalize("NFKC").toLowerCase();
+  s = s.replace(/[ァ-ヶ]/g, ch => String.fromCharCode(ch.charCodeAt(0) - 0x60));
+  s = s.replace(/[\s　、。・？！?!「」『』（）()]/g, "");
+  return s;
+}
+function isCorrect(step, input) {
+  const n = normalize(input);
+  return MISSIONS[0].steps[step].accept.some(a => normalize(a) === n);
+}
+const roomRef = code => ref(db, "rooms/" + code);
+
+/* ===== 先生 ===== */
+let hostCode = sessionStorage.getItem("nb_host_code") || null;
+$("#btn-to-host").onclick = async () => {
+  if (!db) return;
+  show("#view-host");
+  if (!hostCode) {
+    let code;
+    do { code = String(Math.floor(1000 + Math.random() * 9000)); }
+    while ((await get(roomRef(code))).exists());
+    hostCode = code;
+    sessionStorage.setItem("nb_host_code", code);
+    await set(roomRef(code), { meta: { status: "lobby", missionId: "key", createdAt: Date.now() }, teams: {}, events: {} });
+  }
+  $("#host-code").textContent = hostCode;
+  onValue(roomRef(hostCode + "/teams"), snap => {
+    const teams = snap.val() || {};
+    const names = Object.values(teams);
+    $("#host-teams").innerHTML = names.length
+      ? names.map(t => `<span class="teamchip" style="background:${t.color}">${t.name}</span>`).join("")
+      : '<span style="color:#9fb4c6">まだいません</span>';
+    $("#btn-start").disabled = names.length === 0;
+  });
+};
+$("#btn-start").onclick = async () => {
+  await update(ref(db, "rooms/" + hostCode + "/meta"), { status: "playing", startedAt: Date.now() });
+  $("#host-msg").innerHTML = '<span class="ok">スタートしました！テレビで状況が見られます。</span>';
+};
+$("#btn-finish").onclick = async () => {
+  if (!hostCode) return;
+  await update(ref(db, "rooms/" + hostCode + "/meta"), { status: "finished" });
+  $("#host-msg").textContent = "結果発表にしました。テレビに順位が出ています。";
+};
+$("#btn-reset-room").onclick = () => { sessionStorage.removeItem("nb_host_code"); location.reload(); };
+
+/* ===== チーム ===== */
+let my = null; // {code, teamId, name, color}
+$("#btn-to-team").onclick = () => show("#view-join");
+$("#btn-join").onclick = async () => {
+  if (!db) return;
+  const code = $("#join-code").value.trim();
+  const name = $("#join-name").value.trim();
+  const msg = $("#join-msg");
+  if (!/^\d{4}$/.test(code)) { msg.innerHTML = '<span class="ng">ルームコードは4けたの数字です</span>'; return; }
+  if (!name) { msg.innerHTML = '<span class="ng">チーム名を入れてください</span>'; return; }
+  const snap = await get(roomRef(code));
+  if (!snap.exists()) { msg.innerHTML = '<span class="ng">そのルームが見つかりません</span>'; return; }
+  const teams = snap.val().teams || {};
+  if (Object.keys(teams).length >= 6) { msg.innerHTML = '<span class="ng">チーム数が上限です</span>'; return; }
+  const teamRef = push(ref(db, "rooms/" + code + "/teams"));
+  const color = TEAM_COLORS[Object.keys(teams).length % TEAM_COLORS.length];
+  my = { code, teamId: teamRef.key, name, color };
+  sessionStorage.setItem("nb_team", JSON.stringify(my));
+  await set(teamRef, { name, color, step: 0, score: 0, hints: {}, solvedAt: {}, finished: false, joinedAt: Date.now() });
+  enterTeamView();
+};
+function enterTeamView() {
+  show("#view-team");
+  $("#team-name-title").textContent = my.name;
+  onValue(roomRef(my.code), snap => {
+    const room = snap.val(); if (!room) return;
+    const t = (room.teams || {})[my.teamId]; if (!t) return;
+    const status = room.meta.status;
+    $("#team-score-line").textContent = `スコア：${t.score}点`;
+    $("#team-wait").classList.toggle("hidden", status !== "lobby");
+    $("#team-done").classList.toggle("hidden", !(t.finished || status === "finished"));
+    $("#team-q").classList.toggle("hidden", !(status === "playing" && !t.finished));
+    if (status === "playing" && !t.finished) renderStep(t);
+  });
+}
+let renderedStep = -1;
+function renderStep(t) {
+  if (t.step === renderedStep) return;
+  renderedStep = t.step;
+  const step = MISSIONS[0].steps[t.step];
+  $("#q-step-label").textContent = `ステップ ${t.step + 1} / ${MISSIONS[0].steps.length}`;
+  $("#q-text").textContent = step.text;
+  $("#q-answer").value = "";
+  $("#q-msg").textContent = "";
+  const clues = [];
+  for (let i = 0; i < t.step; i++) clues.push(MISSIONS[0].steps[i].accept[0]);
+  $("#q-clues").innerHTML = clues.length ? "集めた手がかり：" + clues.map(c => `<span class="clue">${c}</span>`).join("") : "";
+  const hintsDiv = $("#q-hints");
+  hintsDiv.innerHTML = step.hints.map((h, i) => `<div class="hint" id="hint-${i}">ヒント${i + 1}：${h}</div>`).join("");
+  const opened = (t.hints && t.hints[t.step]) || 0;
+  for (let i = 0; i < opened; i++) $("#hint-" + i).classList.add("open");
+}
+$("#btn-hint").onclick = async () => {
+  const snap = await get(ref(db, `rooms/${my.code}/teams/${my.teamId}`));
+  const t = snap.val();
+  const opened = (t.hints && t.hints[t.step]) || 0;
+  if (opened >= 3) { $("#q-msg").textContent = "ヒントは全部開きました"; return; }
+  $("#hint-" + opened).classList.add("open");
+  const upd = { score: Math.max(0, t.score - 2) };
+  upd[`hints/${t.step}`] = opened + 1;
+  await update(ref(db, `rooms/${my.code}/teams/${my.teamId}`), upd);
+};
+$("#btn-answer").onclick = async () => {
+  const input = $("#q-answer").value;
+  const msg = $("#q-msg");
+  const teamPath = `rooms/${my.code}/teams/${my.teamId}`;
+  const snap = await get(ref(db, teamPath));
+  const t = snap.val();
+  if (!isCorrect(t.step, input)) { msg.innerHTML = '<span class="ng">ちがうみたい…もう一度考えてみよう</span>'; return; }
+  const roomSnap = await get(roomRef(my.code));
+  const teams = roomSnap.val().teams || {};
+  const first = !Object.values(teams).some(o => o.solvedAt && o.solvedAt[t.step]);
+  const base = t.step === MISSIONS[0].steps.length - 1 ? 20 : 10;
+  const gain = base + (first ? 3 : 0);
+  const isLast = t.step === MISSIONS[0].steps.length - 1;
+  const upd = { score: t.score + gain, step: t.step + 1, finished: isLast };
+  upd[`solvedAt/${t.step}`] = Date.now();
+  await update(ref(db, teamPath), upd);
+  await push(ref(db, `rooms/${my.code}/events`), {
+    text: `${my.name} がステップ${t.step + 1}をクリア！ +${gain}点${first ? "（一番乗り！）" : ""}`,
+    at: Date.now()
+  });
+  renderedStep = -1;
+  msg.innerHTML = '<span class="ok">正解！</span>';
+};
+
+/* ===== テレビ ===== */
+$("#btn-to-tv").onclick = () => show("#view-tv");
+$("#btn-tv-open").onclick = () => {
+  if (!db) return;
+  const code = $("#tv-code").value.trim();
+  if (!/^\d{4}$/.test(code)) { $("#tv-msg").innerHTML = '<span class="ng">コードは4けたの数字です</span>'; return; }
+  $("#tv-join-box").classList.add("hidden");
+  $("#tv-code-label").textContent = "ルーム：" + code;
+  onValue(roomRef(code), snap => {
+    const room = snap.val();
+    if (!room) { $("#tv-status").textContent = "そのルームが見つかりません"; return; }
+    const teams = Object.values(room.teams || {});
+    teams.sort((a, b) => (b.score - a.score) || ((b.solvedAt ? Object.keys(b.solvedAt).length : 0) - (a.solvedAt ? Object.keys(a.solvedAt).length : 0)));
+    $("#tv-grid").innerHTML = teams.map((t, i) => {
+      const solved = t.solvedAt ? Object.keys(t.solvedAt).length : 0;
+      const dots = MISSIONS[0].steps.map((_, s) => s < solved ? "●" : (s === solved && !t.finished ? "◎" : "○")).join("");
+      const st = t.finished ? "🏁 ゴール！" : (room.meta.status === "playing" ? `ステップ${Math.min(solved + 1, 4)}に挑戦中` : "待機中");
+      return `<div class="tv-team ${i === 0 && teams.length > 1 ? "rank1" : ""}" style="background:${t.color}">
+        <div class="name">${i + 1}位 ${t.name}</div>
+        <div class="score">${t.score}<small>点</small></div>
+        <div class="dots">${dots}</div><div class="st">${st}</div></div>`;
+    }).join("");
+    $("#tv-status").textContent =
+      room.meta.status === "lobby" ? "参加を待っています…" :
+      room.meta.status === "playing" ? "🔥 対戦中！" : "🏆 結果発表";
+    const evs = Object.values(room.events || {}).sort((a, b) => b.at - a.at).slice(0, 8);
+    $("#tv-feed").innerHTML = evs.map(e => `<div>${e.text}</div>`).join("");
+  });
+};
+</script>
+</body>
+</html>
